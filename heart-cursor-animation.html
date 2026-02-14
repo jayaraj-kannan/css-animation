@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Heart Cursor Animation</title>
+  
+  <link href="https://fonts.googleapis.com/css?family=Google+Sans" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css?family=Press+Start+2P" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css?family=Roboto:400,700&display=swap" rel="stylesheet">
+
+  <style>
+    /* ═══════════════════════════════════════════════════ */
+    /* BODY STYLING */
+    /* ═══════════════════════════════════════════════════ */
+    body {
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+      background-color: #1B1C24;
+      font-family: 'Google Sans', sans-serif;
+      color: white;
+      overflow-x: hidden;
+    }
+
+    /* ═══════════════════════════════════════════════════ */
+    /* BUTTON STYLING */
+    /* ═══════════════════════════════════════════════════ */
+    .btn {
+      background: linear-gradient(45deg, #FF8896, #FF6F77);
+      font-family: "Press Start 2P", cursive;
+      font-size: medium;
+      color: #1B1C24;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .btn:hover {
+      background: linear-gradient(45deg, #ff4081, #ff80ab);
+      transform: scale(1.05);
+    }
+
+    /* ═══════════════════════════════════════════════════ */
+    /* PAGE LAYOUT */
+    /* ═══════════════════════════════════════════════════ */
+    .stage {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      gap: 1.4rem;
+      text-align: center;
+      padding: 2rem;
+    }
+
+    .card-title {
+      font-family: "Press Start 2P", cursive;
+      color: #FFD548;
+      font-size: clamp(1rem, 3vw, 2rem);
+      line-height: 1.5;
+    }
+
+    p {
+      font-family: 'Google Sans', sans-serif;
+      color: white;
+      max-width: 460px;
+      font-size: 1rem;
+      line-height: 1.7;
+      opacity: 0.8;
+    }
+
+    hr {
+      border: 1px solid #FFD548;
+      opacity: 1;
+      border-radius: 2px;
+      width: 80%;
+      margin: 0.5rem auto;
+    }
+
+    .hint {
+      font-family: 'Google Sans', sans-serif;
+      font-size: 0.8rem;
+      letter-spacing: 0.15em;
+      color: rgba(255, 255, 255, 0.35);
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    /* ═══════════════════════════════════════════════════ */
+    /* ANIMATIONS */
+    /* ═══════════════════════════════════════════════════ */
+    @keyframes pulse {
+      0%, 100% {
+        opacity: 0.35;
+      }
+      50% {
+        opacity: 0.8;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="stage">
+    <h1 class="card-title">Happy Valentine's Day!</h1>
+    <hr>
+    <p>Move your cursor anywhere on the page — emojis spawn at your cursor, grow as they float upward, then vanish.</p>
+    <button class="btn">Love everyday ❤️</button>
+    <div class="hint">▸ MOVE YOUR MOUSE TO SEE EMOJIS</div>
+  </div>
+
+  <script>
+    /* ═══════════════════════════════════════════════════════════════════════════════ */
+    /* EMOJI CURSOR ANIMATION CONFIGURATION */
+    /* ═══════════════════════════════════════════════════════════════════════════════ */
+
+    // ▼ CHANGE THIS TO YOUR DESIRED EMOJI ▼
+    const CONFIG = {
+      emoji: "♥",                                    // Change to any emoji you like: 💖, ⭐, 🌹, 🎉, etc.
+      colors: ['#f00', '#f06', '#E52B50', '#cc0000', '#FF0000', '#f6f', '#f39', '#f9c'],
+      particleCount: 100,                            // Total number of particles to use in the animation
+      minSize: 15,                                  // Minimum font size of the emoji particles
+      maxSize: 30,
+      opacity: 0.45,
+      updateInterval: 30 
+    };                           // Time (in ms) between animation updates};
+
+    /* ═══════════════════════════════════════════════════════════════════════════════ */
+    /* ANIMATION STATE VARIABLES */
+    /* ═══════════════════════════════════════════════════════════════════════════════ */
+
+    let state = {
+      x: 400,
+      y: 300,
+      prevX: 400,
+      prevY: 300,
+      viewportWidth: 800,
+      viewportHeight: 600,
+      scrollLeft: 0,
+      scrollTop: 0,
+      particles: [],
+      particleX: [],
+      particleY: [],
+      particleSize: []
+    };
+
+    /* ═══════════════════════════════════════════════════════════════════════════════ */
+    /* INITIALIZATION */
+    /* ═══════════════════════════════════════════════════════════════════════════════ */
+
+    function addLoadEvent(callback) {
+      const existingOnLoad = window.onload;
+      if (typeof existingOnLoad !== 'function') {
+        window.onload = callback;
+      } else {
+        window.onload = function () {
+          if (existingOnLoad) existingOnLoad();
+          callback();
+        };
+      }
+    }
+
+    addLoadEvent(initializeAnimation);
+
+    function initializeAnimation() {
+      if (document.getElementById) {
+        createParticles();
+        updateViewportSize();
+        updateScrollPosition();
+        animationLoop();
+      }
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════════════════ */
+    /* CREATE PARTICLES */
+    /* ═══════════════════════════════════════════════════════════════════════════════ */
+
+    function createParticles() {
+      for (let i = 0; i < CONFIG.particleCount; i++) {
+        const particle = createParticleElement();
+        particle.style.color = CONFIG.colors[i % CONFIG.colors.length];
+        particle.appendChild(document.createTextNode(CONFIG.emoji));
+
+        state.particles[i] = particle;
+        state.particleY[i] = false;
+        
+        document.body.appendChild(particle);
+      }
+    }
+
+    function createParticleElement() {
+      const div = document.createElement("div");
+      div.style.position = "absolute";
+      div.style.height = "auto";
+      div.style.width = "auto";
+      div.style.overflow = "hidden";
+      div.style.backgroundColor = "transparent";
+      div.style.visibility = "hidden";
+      div.style.zIndex = "1001";
+      div.style.pointerEvents = "none";
+      div.style.opacity = CONFIG.opacity;
+      return div;
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════════════════ */
+    /* ANIMATION LOOP */
+    /* ═══════════════════════════════════════════════════════════════════════════════ */
+
+    function animationLoop() {
+      // Check if mouse has moved
+      if (Math.abs(state.x - state.prevX) > 1 || Math.abs(state.y - state.prevY) > 1) {
+        state.prevX = state.x;
+        state.prevY = state.y;
+        spawnParticle();
+      }
+
+      // Update all active particles
+      for (let i = 0; i < CONFIG.particleCount; i++) {
+        if (state.particleY[i] !== false) {
+          updateParticle(i);
+        }
+      }
+
+      setTimeout(animationLoop, CONFIG.updateInterval);
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════════════════ */
+    /* SPAWN NEW PARTICLE */
+    /* ═══════════════════════════════════════════════════════════════════════════════ */
+
+    function spawnParticle() {
+      // Find first inactive particle
+      for (let i = 0; i < CONFIG.particleCount; i++) {
+        if (state.particleY[i] === false) {
+          state.particles[i].firstChild.nodeValue = CONFIG.emoji;
+          state.particles[i].style.left = (state.particleX[i] = state.x - CONFIG.minSize / 2) + "px";
+          state.particles[i].style.top = (state.particleY[i] = state.y - CONFIG.minSize) + "px";
+          state.particles[i].style.fontSize = CONFIG.minSize + "px";
+          state.particles[i].style.fontWeight = 'normal';
+          state.particles[i].style.visibility = 'visible';
+          state.particleSize[i] = CONFIG.minSize;
+          break;
+        }
+      }
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════════════════ */
+    /* UPDATE PARTICLE POSITION AND SIZE */
+    /* ═══════════════════════════════════════════════════════════════════════════════ */
+
+    function updateParticle(index) {
+      const size = state.particleSize[index];
+
+      // Move particle upward and apply slight horizontal drift
+      state.particleY[index] -= size / CONFIG.minSize + index % 2;
+      state.particleX[index] += (index % 5 - 2) / 5;
+
+      // Check if particle is out of bounds
+      if (
+        state.particleY[index] < state.scrollTop - size ||
+        state.particleX[index] < state.scrollLeft - size ||
+        state.particleX[index] > state.scrollLeft + state.viewportWidth - size
+      ) {
+        state.particles[index].style.visibility = "hidden";
+        state.particleY[index] = false;
+      } else {
+        // Randomly increase particle size up to max
+        if (Math.random() < CONFIG.maxSize / state.particleY[index] && size < CONFIG.maxSize) {
+          state.particles[index].style.fontSize = (++state.particleSize[index]) + "px";
+        }
+
+        // Update position
+        state.particles[index].style.top = state.particleY[index] + "px";
+        state.particles[index].style.left = state.particleX[index] + "px";
+      }
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════════════════ */
+    /* MOUSE TRACKING */
+    /* ═══════════════════════════════════════════════════════════════════════════════ */
+
+    document.onmousemove = function (e) {
+      state.x = e.pageX;
+      state.y = e.pageY;
+    };
+
+    /* ═══════════════════════════════════════════════════════════════════════════════ */
+    /* VIEWPORT SIZE HANDLING */
+    /* ═══════════════════════════════════════════════════════════════════════════════ */
+
+    window.onresize = updateViewportSize;
+
+    function updateViewportSize() {
+      let width = 800;
+      let height = 600;
+
+      // Try different methods to get viewport size
+      if (document.documentElement && document.documentElement.clientWidth) {
+        if (document.documentElement.clientWidth > 0) width = document.documentElement.clientWidth;
+        if (document.documentElement.clientHeight > 0) height = document.documentElement.clientHeight;
+      }
+
+      if (typeof self.innerWidth === 'number' && self.innerWidth) {
+        if (self.innerWidth > 0 && self.innerWidth < width) width = self.innerWidth;
+        if (self.innerHeight > 0 && self.innerHeight < height) height = self.innerHeight;
+      }
+
+      if (document.body.clientWidth) {
+        if (document.body.clientWidth > 0 && document.body.clientWidth < width) width = document.body.clientWidth;
+        if (document.body.clientHeight > 0 && document.body.clientHeight < height) height = document.body.clientHeight;
+      }
+
+      state.viewportWidth = width;
+      state.viewportHeight = height;
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════════════════ */
+    /* SCROLL POSITION HANDLING */
+    /* ═══════════════════════════════════════════════════════════════════════════════ */
+
+    window.onscroll = updateScrollPosition;
+
+    function updateScrollPosition() {
+      if (typeof self.pageYOffset === 'number') {
+        state.scrollTop = self.pageYOffset;
+        state.scrollLeft = self.pageXOffset;
+      } else if (document.body && (document.body.scrollTop || document.body.scrollLeft)) {
+        state.scrollTop = document.body.scrollTop;
+        state.scrollLeft = document.body.scrollLeft;
+      } else if (document.documentElement && (document.documentElement.scrollTop || document.documentElement.scrollLeft)) {
+        state.scrollLeft = document.documentElement.scrollLeft;
+        state.scrollTop = document.documentElement.scrollTop;
+      } else {
+        state.scrollTop = 0;
+        state.scrollLeft = 0;
+      }
+    }
+  </script>
+
+</body>
+</html>
+
+</body>
+</html>
